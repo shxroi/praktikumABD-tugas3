@@ -14,8 +14,15 @@ def get_connection():
     global conn, c
     if conn is None:
         try:
-            # Cek apakah running di Streamlit Cloud atau local
-            if 'secrets' in dir(st) and hasattr(st, 'secrets') and len(st.secrets) > 0:
+            # Cek apakah ada st.secrets (untuk Streamlit Cloud)
+            use_secrets = False
+            try:
+                if hasattr(st, 'secrets') and len(st.secrets) > 0:
+                    use_secrets = True
+            except:
+                use_secrets = False
+            
+            if use_secrets:
                 # Di Streamlit Cloud, gunakan st.secrets
                 conn = psycopg2.connect(
                     host=st.secrets.get("DB_HOST", "localhost"),
