@@ -1,0 +1,130 @@
+import psycopg2
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Variabel global untuk koneksi
+conn = None
+c = None
+
+def get_connection():
+    """Membuat atau mengembalikan koneksi database"""
+    global conn, c
+    if conn is None:
+        try:
+            conn = psycopg2.connect(
+                host=os.getenv('DB_HOST', 'localhost'),
+                port=os.getenv('DB_PORT', '5432'),
+                user=os.getenv('DB_USER', 'postgres'),
+                password=os.getenv('DB_PASSWORD', 'postgre'),
+                dbname=os.getenv('DB_NAME', 'earthquake_db')
+            )
+            c = conn.cursor()
+            print("✓ Koneksi PostgreSQL berhasil!")
+        except Exception as e:
+            print(f"✗ Error koneksi database: {e}")
+            raise
+    return conn, c
+
+# ============================
+# Fungsi ambil data dari tabel
+# ============================
+
+def view_all_earthquakes():
+    """Mengambil semua data gempa"""
+    _, cursor = get_connection()
+    query = '''
+        SELECT id, tanggal, waktu, latitude, longitude, depth, magnitude, remark
+        FROM katalog_gempa
+        ORDER BY tanggal DESC, waktu DESC
+    '''
+    cursor.execute(query)
+    return cursor.fetchall()
+
+def view_statistics_by_month():
+    """Mengambil statistik gempa per bulan"""
+    _, cursor = get_connection()
+    query = '''
+        SELECT 
+            bulan,
+            jumlah_gempa,
+            rata_rata_magnitude,
+            magnitude_maksimum,
+            magnitude_minimum
+        FROM statistik_gempa
+        ORDER BY bulan DESC
+    '''
+    cursor.execute(query)
+    return cursor.fetchall()
+
+def view_top_earthquakes(limit=10):
+    """Mengambil gempa dengan magnitude tertinggi"""
+    _, cursor = get_connection()
+    query = '''
+        SELECT tanggal, waktu, latitude, longitude, magnitude, remark
+        FROM katalog_gempa
+        ORDER BY magnitude DESC
+        LIMIT %s
+    '''
+    cursor.execute(query, (limit,))
+    return cursor.fetchall()
+
+def view_earthquakes_by_region():
+    """Mengambil jumlah gempa per wilayah"""
+    _, cursor = get_connection()
+    query = '''
+        SELECT remark, COUNT(*) as jumlah
+        FROM katalog_gempa
+        GROUP BY remark
+        ORDER BY jumlah DESC
+    '''
+    cursor.execute(query)
+    return cursor.fetchall()
+
+def view_earthquakes_by_magnitude_range(min_mag, max_mag):
+    """Mengambil gempa berdasarkan rentang magnitude"""
+    _, cursor = get_connection()
+    query = '''
+        SELECT id, tanggal, waktu, latitude, longitude, depth, magnitude, remark
+        FROM katalog_gempa
+        WHERE magnitude BETWEEN %s AND %s
+        ORDER BY magnitude DESC
+    '''
+    cursor.execute(query, (min_mag, max_mag))
+    return cursor.fetchall()
+
+def view_earthquakes_by_depth_range(min_depth, max_depth):
+    """Mengambil gempa berdasarkan rentang kedalaman"""
+    _, cursor = get_connection()
+    query = '''
+        SELECT id, tanggal, waktu, latitude, longitude, depth, magnitude, remark
+        FROM katalog_gempa
+        WHERE depth BETWEEN %s AND %s
+        ORDER BY depth DESC
+    '''
+    cursor.execute(query, (min_depth, max_depth))
+    return cursor.fetchall()
+
+class Config:
+    """Konfigurasi database PostgreSQL (backward compatibility)"""
+    
+    DB_HOST = os.getenv('DB_HOST', 'localhost')
+    DB_PORT = os.getenv('DB_PORT', '5432')
+    DB_NAME = os.getenv('DB_NAME', 'earthquake_db')
+    DB_USER = os.getenv('DB_USER', 'postgres')
+    DB_PASSWORD = os.getenv('DB_PASSWORD', 'postgres')
+    
+    @staticmethod
+    def get_connection_string():
+        return f"postgresql://{Config.DB_USER}:{Config.DB_PASSWORD}@{Config.DB_HOST}:{Config.DB_PORT}/{Config.DB_NAME}"
+    
+    @staticmethod
+    def get_connection_params():
+        return {
+            'host': Config.DB_HOST,
+            'port': Config.DB_PORT,
+            'database': Config.DB_NAME,
+            'user': Config.DB_USER,
+            'password': Config.DB_PASSWORD
+        }
