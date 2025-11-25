@@ -5,37 +5,61 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 
-# Import fungsi dari config.py
-from config import *
-
-# Set konfigurasi halaman dashboard
+# Set konfigurasi halaman dashboard (HARUS DI AWAL!)
 st.set_page_config("Dashboard Katalog Gempa", page_icon="🌋", layout="wide")
+
+# Import fungsi dari config.py
+try:
+    from config import *
+except Exception as e:
+    st.error(f"❌ Error import config: {e}")
+    st.stop()
 
 # Header Dashboard
 st.title("🌋 Dashboard Katalog Gempa Bumi")
 st.markdown("---")
 
-# Ambil data gempa
-result_earthquakes = view_all_earthquakes()
-df_earthquakes = pd.DataFrame(result_earthquakes, columns=[
-    "id", "tanggal", "waktu", "latitude", "longitude", "depth", "magnitude", "remark"
-])
+# Ambil data gempa dengan error handling
+try:
+    result_earthquakes = view_all_earthquakes()
+    
+    if not result_earthquakes:
+        st.warning("⚠️ Database kosong. Silakan import data terlebih dahulu.")
+        st.info("📌 Untuk import data, jalankan: `python import_data.py`")
+        st.stop()
+    
+    df_earthquakes = pd.DataFrame(result_earthquakes, columns=[
+        "id", "tanggal", "waktu", "latitude", "longitude", "depth", "magnitude", "remark"
+    ])
+    
+    # Konversi tipe data
+    df_earthquakes['tanggal'] = pd.to_datetime(df_earthquakes['tanggal'])
+    df_earthquakes['magnitude'] = pd.to_numeric(df_earthquakes['magnitude'])
+    df_earthquakes['depth'] = pd.to_numeric(df_earthquakes['depth'])
+    
+    # Ambil data statistik per bulan
+    result_stats = view_statistics_by_month()
+    df_stats = pd.DataFrame(result_stats, columns=[
+        "bulan", "jumlah_gempa", "rata_rata_magnitude", "magnitude_maksimum", "magnitude_minimum"
+    ])
+    
+    if not df_stats.empty:
+        df_stats['bulan'] = pd.to_datetime(df_stats['bulan'])
+    
+    # Ambil data gempa per wilayah
+    result_regions = view_earthquakes_by_region()
+    df_regions = pd.DataFrame(result_regions, columns=["remark", "jumlah"])
 
-# Konversi tipe data
-df_earthquakes['tanggal'] = pd.to_datetime(df_earthquakes['tanggal'])
-df_earthquakes['magnitude'] = pd.to_numeric(df_earthquakes['magnitude'])
-df_earthquakes['depth'] = pd.to_numeric(df_earthquakes['depth'])
+except Exception as e:
+    st.error(f"❌ Gagal memuat data dari database: {e}")
+    st.info("💡 Pastikan database sudah terisi dengan data dan konfigurasi sudah benar.")
+    st.stop()
 
-# Ambil data statistik per bulan
-result_stats = view_statistics_by_month()
-df_stats = pd.DataFrame(result_stats, columns=[
-    "bulan", "jumlah_gempa", "rata_rata_magnitude", "magnitude_maksimum", "magnitude_minimum"
-])
-df_stats['bulan'] = pd.to_datetime(df_stats['bulan'])
+# Cek apakah data tersedia
+if df_earthquakes.empty:
+    st.warning("⚠️ Tidak ada data gempa yang tersedia.")
+    st.stop()
 
-# Ambil data gempa per wilayah
-result_regions = view_earthquakes_by_region()
-df_regions = pd.DataFrame(result_regions, columns=["remark", "jumlah"])
 
 # ============================
 # SIDEBAR - Navigasi & Filter

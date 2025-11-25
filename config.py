@@ -1,5 +1,6 @@
 import psycopg2
 import os
+import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,17 +14,31 @@ def get_connection():
     global conn, c
     if conn is None:
         try:
-            conn = psycopg2.connect(
-                host=os.getenv('DB_HOST', 'localhost'),
-                port=os.getenv('DB_PORT', '5432'),
-                user=os.getenv('DB_USER', 'postgres'),
-                password=os.getenv('DB_PASSWORD', 'postgre'),
-                dbname=os.getenv('DB_NAME', 'earthquake_db')
-            )
+            # Cek apakah running di Streamlit Cloud atau local
+            if 'secrets' in dir(st) and hasattr(st, 'secrets') and len(st.secrets) > 0:
+                # Di Streamlit Cloud, gunakan st.secrets
+                conn = psycopg2.connect(
+                    host=st.secrets.get("DB_HOST", "localhost"),
+                    port=st.secrets.get("DB_PORT", "5432"),
+                    database=st.secrets.get("DB_NAME", "earthquake_db"),
+                    user=st.secrets.get("DB_USER", "postgres"),
+                    password=st.secrets.get("DB_PASSWORD", "postgres")
+                )
+            else:
+                # Di local, gunakan .env
+                conn = psycopg2.connect(
+                    host=os.getenv('DB_HOST', 'localhost'),
+                    port=os.getenv('DB_PORT', '5432'),
+                    user=os.getenv('DB_USER', 'postgres'),
+                    password=os.getenv('DB_PASSWORD', 'postgres'),
+                    dbname=os.getenv('DB_NAME', 'earthquake_db')
+                )
             c = conn.cursor()
             print("✓ Koneksi PostgreSQL berhasil!")
         except Exception as e:
             print(f"✗ Error koneksi database: {e}")
+            st.error(f"❌ Gagal koneksi ke database: {e}")
+            st.info("💡 Pastikan database PostgreSQL sudah running dan konfigurasi sudah benar.")
             raise
     return conn, c
 

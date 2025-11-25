@@ -1,0 +1,38 @@
+# Environment variables
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Streamlit
+.streamlit/secrets.toml
+.streamlit/config.toml
+
+# Database
+*.sql~
+*.db
+*.sqlite
+
+# CSV data files (jika tidak ingin di-push)
+# katalog_gempa_new.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
