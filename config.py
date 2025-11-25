@@ -14,34 +14,55 @@ def get_connection():
     global conn, c
     if conn is None:
         try:
+            # Debug: Cek .env terbaca atau tidak
+            print(f"🔍 DEBUG - DB_HOST dari .env: {os.getenv('DB_HOST')}")
+            print(f"🔍 DEBUG - DB_PORT dari .env: {os.getenv('DB_PORT')}")
+            print(f"🔍 DEBUG - DB_NAME dari .env: {os.getenv('DB_NAME')}")
+            
             # Cek apakah ada st.secrets (untuk Streamlit Cloud)
             use_secrets = False
             try:
-                if hasattr(st, 'secrets') and len(st.secrets) > 0:
+                if hasattr(st, 'secrets') and 'DB_HOST' in st.secrets:
                     use_secrets = True
+                    print("🔍 DEBUG - Menggunakan st.secrets")
             except:
                 use_secrets = False
+                print("🔍 DEBUG - Menggunakan .env file")
             
             if use_secrets:
                 # Di Streamlit Cloud, gunakan st.secrets
-                conn = psycopg2.connect(
-                    host=st.secrets.get("DB_HOST", "localhost"),
-                    port=st.secrets.get("DB_PORT", "5432"),
-                    database=st.secrets.get("DB_NAME", "earthquake_db"),
-                    user=st.secrets.get("DB_USER", "postgres"),
-                    password=st.secrets.get("DB_PASSWORD", "postgres")
-                )
+                db_config = {
+                    'host': st.secrets["DB_HOST"],
+                    'port': int(st.secrets.get("DB_PORT", "5432")),
+                    'database': st.secrets.get("DB_NAME", "postgres"),
+                    'user': st.secrets.get("DB_USER", "postgres"),
+                    'password': st.secrets["DB_PASSWORD"]
+                }
             else:
-                # Di local, gunakan .env
-                conn = psycopg2.connect(
-                    host=os.getenv('DB_HOST', 'localhost'),
-                    port=os.getenv('DB_PORT', '5432'),
-                    user=os.getenv('DB_USER', 'postgres'),
-                    password=os.getenv('DB_PASSWORD', 'postgres'),
-                    dbname=os.getenv('DB_NAME', 'earthquake_db')
-                )
+                # Di local, gunakan .env - FORCE SUPABASE VALUES
+                db_host = os.getenv('DB_HOST')
+                if not db_host or db_host == 'localhost':
+                    print("⚠️ WARNING: DB_HOST tidak terbaca atau masih localhost!")
+                    st.warning("⚠️ File .env mungkin tidak terbaca. Menggunakan konfigurasi Supabase default.")
+                    db_host = 'db.hpuczdikgdhrtqimoovt.supabase.co'
+                
+                db_config = {
+                    'host': db_host,
+                    'port': int(os.getenv('DB_PORT', '5432')),
+                    'database': os.getenv('DB_NAME', 'postgres'),
+                    'user': os.getenv('DB_USER', 'postgres'),
+                    'password': os.getenv('DB_PASSWORD', '0WiWduMkDzytHnL5')
+                }
+            
+            # Debug info (tanpa password)
+            print(f"🔌 Connecting to: {db_config['user']}@{db_config['host']}:{db_config['port']}/{db_config['database']}")
+            st.info(f"🔌 Connecting: {db_config['user']}@{db_config['host']}:{db_config['port']}/{db_config['database']}")
+            
+            conn = psycopg2.connect(**db_config)
             c = conn.cursor()
+            st.success("✅ Koneksi database berhasil!")
             print("✓ Koneksi PostgreSQL berhasil!")
+            
         except Exception as e:
             print(f"✗ Error koneksi database: {e}")
             st.error(f"❌ Gagal koneksi ke database: {e}")
