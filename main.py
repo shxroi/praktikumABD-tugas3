@@ -17,6 +17,8 @@ except Exception as e:
 
 # Header Dashboard
 st.title("🌋 Dashboard Katalog Gempa Bumi")
+image = "https://img2.beritasatu.com/cache/jakartaglobe/960x620-3/2018/02/Gunung-Rinjani.jpg"
+st.image(image, width=900)
 st.markdown("---")
 
 # Ambil data gempa dengan error handling
